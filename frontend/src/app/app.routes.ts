@@ -4,7 +4,7 @@ export const appRoutes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'expense-reports' },
   {
     path: 'users',
-    loadComponent: () => import('./features/users/users-placeholder.page').then(m => m.UsersPlaceholderPage),
+    loadComponent: () => import('./features/users/user-list.page').then(m => m.UserListPage),
   },
   {
     path: 'expense-reports',

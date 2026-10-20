@@ -1,0 +1,10 @@
+.users-page { display: grid; gap: 1.25rem; }
+    .heading { display: flex; justify-content: space-between; gap: 1rem; align-items: center; }
+    h1, h2 { margin: 0 0 .5rem; } .heading p { margin: 0; color: #64748b; }
+    button { border: none; background: #1d4ed8; color: white; padding: .65rem 1rem; border-radius: .4rem; cursor: pointer; }
+    button.link { background: transparent; color: #1d4ed8; }
+    .panel { background: white; border: 1px solid #e2e8f0; border-radius: .6rem; padding: 1.2rem; }
+    .editor { display: grid; gap: .9rem; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th, td { padding: .75rem; border-bottom: 1px solid #e2e8f0; } th { color: #475569; }
+    .error { color: #991b1b; background: #fef2f2; border: 1px solid #fecaca; padding: .8rem; border-radius: .4rem; }

@@ -1,0 +1,20 @@
+<form [formGroup]="form" (ngSubmit)="submit()" class="user-form">
+      <div class="fields">
+        <label>Prénom <input formControlName="firstName" maxlength="100" autocomplete="given-name" /></label>
+        <label>Nom <input formControlName="lastName" maxlength="100" autocomplete="family-name" /></label>
+        <label class="wide">Adresse postale <textarea formControlName="postalAddress" maxlength="500" rows="3"></textarea></label>
+        <label>Plafond mensuel (nombre de dépenses)
+          <input type="number" formControlName="monthlyExpenseLimit" min="0" step="1" />
+        </label>
+      </div>
+      @if (form.controls.firstName.touched && form.controls.firstName.invalid || form.controls.lastName.touched && form.controls.lastName.invalid) {
+        <p class="error" role="alert">Le prénom et le nom sont obligatoires (100 caractères maximum).</p>
+      }
+      @if (form.controls.monthlyExpenseLimit.touched && form.controls.monthlyExpenseLimit.invalid) {
+        <p class="error" role="alert">Le plafond doit être un nombre entier positif ou nul.</p>
+      }
+      <div class="actions">
+        <button type="button" class="secondary" (click)="cancelled.emit()" [disabled]="saving()">Annuler</button>
+        <button type="submit" [disabled]="saving()">{{ saving() ? 'Enregistrement…' : 'Enregistrer' }}</button>
+      </div>
+    </form>

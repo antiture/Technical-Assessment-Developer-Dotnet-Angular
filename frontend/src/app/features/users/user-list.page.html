@@ -1,0 +1,27 @@
+<section class="users-page">
+      <div class="heading"><div><h1>Utilisateurs</h1><p>Gestion des profils et des plafonds mensuels</p></div>
+        <button type="button" (click)="startCreate()">Nouvel utilisateur</button>
+      </div>
+      @if (error()) { <p role="alert" class="error">{{ error() }}</p> }
+      @if (loading()) { <p role="status">Chargement des utilisateurs…</p> }
+      @else {
+        <div class="panel">
+          @if (users().length === 0) { <p>Aucun utilisateur.</p> }
+          @else {
+            <table><thead><tr><th>Nom</th><th>Action</th></tr></thead><tbody>
+            @for (item of users(); track item.id) {
+              <tr><td>{{ item.name }}</td><td><button class="link" type="button" (click)="startEdit(item.id)">Modifier</button></td></tr>
+            }
+            </tbody></table>
+          }
+        </div>
+      }
+      @if (editorOpen()) {
+        <section class="panel editor" aria-label="Formulaire utilisateur">
+          <h2>{{ editingId() ? 'Modifier un utilisateur' : 'Créer un utilisateur' }}</h2>
+          @if (detailLoading()) { <p role="status">Chargement du profil…</p> }
+          @else if (detailError()) { <p class="error" role="alert">{{ detailError() }}</p> }
+          @else { <app-user-form [user]="editingUser()" [saving]="saving()" (saved)="save($event)" (cancelled)="closeEditor()" /> }
+        </section>
+      }
+    </section>
