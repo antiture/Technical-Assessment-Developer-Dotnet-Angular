@@ -1,11 +1,15 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="src\AppHost\AppHost.csproj" Type="Classic C#" />
-    <Project Path="src\WebApi\WebApi.csproj" Type="Classic C#" />
+    <Project Path="src\AppHost\AppHost.csproj" />
+    <Project Path="src\WebApi\WebApi.csproj" />
   </Folder>
   <Folder Name="/test/">
+    <Project Path="test\WebApi.Tests\WebApi.Tests.csproj" />
   </Folder>
   <Folder Name="/_/">
     <File Path="global.json" />
+  </Folder>
+  <Folder Name="/Éléments de solution/">
+    <File Path="N2JSoft.runsettings" />
   </Folder>
 </Solution>
