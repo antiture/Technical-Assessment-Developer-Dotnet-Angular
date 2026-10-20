@@ -1,2 +1,8 @@
-<app-nx-welcome></app-nx-welcome>
-<router-outlet></router-outlet>
+<header class="app-header">
+  <a class="brand" routerLink="/expense-reports" aria-label="N2JSoft - Accueil">N2JSoft <span>· Notes de frais</span></a>
+  <nav aria-label="Navigation principale">
+    <a routerLink="/expense-reports" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: false }">Notes de frais</a>
+    <a routerLink="/users" routerLinkActive="active">Utilisateurs</a>
+  </nav>
+</header>
+<main class="app-main"><router-outlet /></main>
