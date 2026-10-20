@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using WebApi.Domain.Entities;
+using WebApi.Modules.Users.Domain;
+using WebApi.Modules.Users.Infrastructure;
 
 namespace WebApi.Infrastructure.Persistence;
 
@@ -13,10 +14,10 @@ internal sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbC
 
     internal static async Task SeedAsync(DbContext context, CancellationToken cancellationToken)
     {
-        if (!context.Set<User>().Any())
+        if (!await context.Set<User>().AnyAsync(cancellationToken))
         {
-            context.Set<User>().Add(new User { FirstName = "Juste", LastName = "Leblanc" });
-            context.Set<User>().Add(new User { FirstName = "Marc", LastName = "Assin" });
+            context.Set<User>().Add(User.Create("Juste", "Leblanc", "", 10, true));
+            context.Set<User>().Add(User.Create("Marc", "Assin", "", 10, true));
             await context.SaveChangesAsync(cancellationToken);
         }
     }
