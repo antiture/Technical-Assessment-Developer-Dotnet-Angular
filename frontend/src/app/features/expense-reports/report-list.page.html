@@ -4,6 +4,7 @@
     <button type="button" (click)="openCreate()">Nouvelle note de frais</button>
   </header>
 
+  @if (partialCreationWarning()) { <p role="alert" class="warning">{{ partialCreationWarning() }}</p> }
   @if (error()) { <p role="alert" class="error">{{ error() }}</p> }
   @if (loading()) { <p role="status">Chargement des notes de frais…</p> }
   @else {
@@ -44,7 +45,10 @@
         <span>Note de frais · {{ report.month }}/{{ report.year }}</span>
       </div>
       <section class="expense-section" aria-label="Dépenses">
-        <h3>Dépenses</h3>
+        <div class="expense-section-header">
+          <h3>Dépenses</h3>
+          <button type="button" (click)="openExpenseEditor()">Ajouter une dépense</button>
+        </div>
         @if (expensesLoading()) {
           <p role="status">Chargement des dépenses…</p>
         } @else if (expensesError()) {
@@ -57,7 +61,7 @@
             <div class="expenses-table-wrapper">
               <table class="expenses-table">
                 <thead>
-                  <tr><th scope="col">Libellé</th><th scope="col">Date</th><th scope="col">Adresse de facturation</th><th scope="col" class="amount">Montant</th></tr>
+                  <tr><th scope="col">Libellé</th><th scope="col">Date</th><th scope="col">Adresse de facturation</th><th scope="col" class="amount">Montant</th><th scope="col">Actions</th></tr>
                 </thead>
                 <tbody>
                   @for (expense of result.items; track expense.id) {
@@ -66,6 +70,10 @@
                       <td>{{ formatExpenseDate(expense.date) }}</td>
                       <td>{{ expense.store }} · {{ expense.street }}, {{ expense.postalCode }} {{ expense.city }}</td>
                       <td class="amount">{{ formatAmount(expense.amount) }}</td>
+                      <td class="actions-cell">
+                        <button type="button" class="link" (click)="openExpenseEditor(expense)">Modifier</button>
+                        <button type="button" class="link danger" (click)="requestExpenseDelete(expense)">Supprimer</button>
+                      </td>
                     </tr>
                   }
                 </tbody>
@@ -84,6 +92,33 @@
     }
     <div class="dialog-actions">
       <button type="button" class="secondary" (click)="closeDetail()">Fermer</button>
+    </div>
+  </dialog>
+
+  <dialog #expenseDialog aria-labelledby="expense-editor-title" (cancel)="onExpenseCancel($event)">
+    <div class="dialog-heading">
+      <h2 id="expense-editor-title">{{ editingExpense() ? 'Modifier une dépense' : 'Ajouter une dépense' }}</h2>
+      <button type="button" class="close" aria-label="Fermer" [disabled]="expenseSaving()" (click)="closeExpenseEditor()">×</button>
+    </div>
+    @if (viewingReport(); as report) {
+      @if (expenseEditorOpen()) {
+        <app-expense-form [year]="report.year" [month]="report.month" [expense]="editingExpense()"
+          [saving]="expenseSaving()" (saved)="saveExpense($event)" (cancelled)="closeExpenseEditor()" />
+      }
+    }
+    @if (expenseFormError()) { <p class="error" role="alert">{{ expenseFormError() }}</p> }
+  </dialog>
+
+  <dialog #expenseDeleteDialog aria-labelledby="expense-delete-title" (cancel)="onExpenseDeleteCancel($event)">
+    <div class="dialog-heading">
+      <h2 id="expense-delete-title">Supprimer la dépense ?</h2>
+      <button type="button" class="close" aria-label="Fermer" [disabled]="expenseDeleting()" (click)="closeExpenseDelete()">×</button>
+    </div>
+    <p>Confirmer la suppression de « {{ expenseToDelete()?.description }} » ?</p>
+    @if (expenseDeleteError()) { <p role="alert" class="error">{{ expenseDeleteError() }}</p> }
+    <div class="dialog-actions">
+      <button type="button" class="secondary" [disabled]="expenseDeleting()" (click)="closeExpenseDelete()">Annuler</button>
+      <button type="button" class="danger-button" [disabled]="expenseDeleting()" (click)="confirmExpenseDelete()">Supprimer</button>
     </div>
   </dialog>
 

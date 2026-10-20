@@ -1,0 +1,35 @@
+<form [formGroup]="form" (ngSubmit)="submit()" class="expense-form">
+  <div class="fields-two">
+    <label>Date
+      <input type="date" formControlName="date" required />
+    </label>
+    <label>Montant (€)
+      <input type="number" formControlName="amount" min="0.01" step="0.01" required />
+    </label>
+  </div>
+  @if (form.controls.date.touched && form.controls.date.invalid) {
+    <small role="alert">La date doit être valide et appartenir au mois de la note de frais.</small>
+  }
+  @if (form.controls.amount.touched && form.controls.amount.invalid) {
+    <small role="alert">Montant positif avec deux décimales maximum.</small>
+  }
+  <label>Libellé
+    <input type="text" formControlName="description" maxlength="50" required />
+  </label>
+  @if (form.controls.description.touched && form.controls.description.invalid) {
+    <small role="alert">Libellé requis (50 caractères maximum).</small>
+  }
+  <fieldset>
+    <legend>Adresse de facturation</legend>
+    <label>Établissement<input formControlName="store" maxlength="200" required /></label>
+    <label>Rue<input formControlName="street" maxlength="200" required /></label>
+    <div class="fields-two">
+      <label>Code postal<input formControlName="postalCode" maxlength="20" required /></label>
+      <label>Ville<input formControlName="city" maxlength="100" required /></label>
+    </div>
+  </fieldset>
+  <div class="actions">
+    <button class="secondary" type="button" [disabled]="saving()" (click)="cancelled.emit()">Annuler</button>
+    <button type="submit" [disabled]="saving()">{{ saving() ? 'Enregistrement…' : 'Enregistrer' }}</button>
+  </div>
+</form>

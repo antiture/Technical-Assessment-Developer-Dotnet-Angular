@@ -165,3 +165,27 @@ dialog[aria-labelledby="detail-report-title"] {
   gap: 0.75rem;
 }
 
+
+.expense-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+
+  h3 {
+    margin: 0;
+  }
+}
+
+.warning {
+  padding: 0.8rem;
+  border: 1px solid #facc15;
+  border-radius: 0.4rem;
+  background: #fefce8;
+  color: #854d0e;
+}
+
+dialog[aria-labelledby="expense-editor-title"] {
+  width: min(760px, calc(100vw - 32px));
+}

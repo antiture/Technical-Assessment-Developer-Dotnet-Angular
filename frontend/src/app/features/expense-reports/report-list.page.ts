@@ -1,15 +1,16 @@
 import { ChangeDetectionStrategy, Component, ElementRef, inject, OnInit, signal, viewChild } from '@angular/core';
 import { catchError, finalize, forkJoin, map, of, switchMap } from 'rxjs';
 import { apiErrorMessage } from '../../core/api/api-error';
-import { CreateReportRequest, ExpensePage, ReportDto, UserInfo } from '../../core/api/api.models';
+import { CreateReportRequest, ExpenseDto, ExpensePage, ReportDto, SaveExpenseRequest, UserInfo } from '../../core/api/api.models';
 import { ExpensesApiService } from '../../core/api/expenses-api.service';
 import { ReportsApiService } from '../../core/api/reports-api.service';
 import { UsersApiService } from '../../core/api/users-api.service';
 import { ReportFormComponent } from './report-form.component';
+import { ExpenseFormComponent } from '../expenses/expense-form.component';
 
 @Component({
   standalone: true,
-  imports: [ReportFormComponent],
+  imports: [ReportFormComponent, ExpenseFormComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './report-list.page.html',
   styleUrl: './report-list.page.scss',
@@ -21,6 +22,8 @@ export class ReportListPage implements OnInit {
   private readonly createDialog = viewChild.required<ElementRef<HTMLDialogElement>>('createDialog');
   private readonly deleteDialog = viewChild.required<ElementRef<HTMLDialogElement>>('deleteDialog');
   private readonly detailDialog = viewChild.required<ElementRef<HTMLDialogElement>>('detailDialog');
+  private readonly expenseDialog = viewChild.required<ElementRef<HTMLDialogElement>>('expenseDialog');
+  private readonly expenseDeleteDialog = viewChild.required<ElementRef<HTMLDialogElement>>('expenseDeleteDialog');
 
   readonly reports = signal<ReportDto[]>([]);
   readonly loading = signal(false);
@@ -41,6 +44,14 @@ export class ReportListPage implements OnInit {
   readonly expensesLoading = signal(false);
   readonly expensesError = signal<string | null>(null);
   readonly currentPage = signal(1);
+  readonly editingExpense = signal<ExpenseDto | null>(null);
+  readonly expenseEditorOpen = signal(false);
+  readonly expenseSaving = signal(false);
+  readonly expenseFormError = signal<string | null>(null);
+  readonly expenseToDelete = signal<ExpenseDto | null>(null);
+  readonly expenseDeleting = signal(false);
+  readonly expenseDeleteError = signal<string | null>(null);
+  readonly partialCreationWarning = signal<string | null>(null);
   private detailToken = 0;
   private usersToken = 0;
 
@@ -59,6 +70,7 @@ export class ReportListPage implements OnInit {
     if (this.saving() || this.deleting()) return;
     this.createOpen.set(true);
     this.formError.set(null);
+    this.partialCreationWarning.set(null);
     this.usersError.set(null);
     this.eligibleUsers.set([]);
     this.usersLoading.set(true);
@@ -85,12 +97,29 @@ export class ReportListPage implements OnInit {
     this.createDialog().nativeElement.close();
   }
 
-  create(request: CreateReportRequest): void {
+  create(request: CreateReportRequest & { firstExpense?: SaveExpenseRequest }): void {
     if (this.saving()) return;
     this.saving.set(true);
     this.formError.set(null);
-    this.reportsApi.create(request).pipe(finalize(() => this.saving.set(false))).subscribe({
-      next: () => { this.closeAfterCreate(); this.loadReports(); },
+    const { firstExpense, ...reportRequest } = request;
+    this.reportsApi.create(reportRequest).pipe(
+      switchMap(report => firstExpense
+        ? this.expensesApi.create(report.id, firstExpense).pipe(
+            map(() => ({ report, expenseError: null as string | null })),
+            catchError(err => of({ report, expenseError: apiErrorMessage(err) })),
+          )
+        : of({ report, expenseError: null as string | null })),
+      finalize(() => this.saving.set(false)),
+    ).subscribe({
+      next: ({ report, expenseError }) => {
+        this.closeAfterCreate();
+        this.loadReports();
+        if (expenseError) {
+          this.partialCreationWarning.set(`La note « ${report.title} » a été créée, mais la première dépense a échoué : ${expenseError}. Ouvrez Consulter pour réessayer.`);
+        } else {
+          this.partialCreationWarning.set(null);
+        }
+      },
       error: err => this.formError.set(apiErrorMessage(err)),
     });
   }
@@ -168,6 +197,7 @@ export class ReportListPage implements OnInit {
   }
 
   closeDetail(): void {
+    if (this.expenseSaving() || this.expenseDeleting()) return;
     ++this.detailToken;
     this.detailLoading.set(false);
     this.viewingReport.set(null);
@@ -180,6 +210,82 @@ export class ReportListPage implements OnInit {
     this.detailLoading.set(false);
     this.viewingReport.set(null);
     this.expensePage.set(null);
+  }
+
+  openExpenseEditor(expense: ExpenseDto | null = null): void {
+    if (!this.viewingReport() || this.expenseSaving() || this.expenseDeleting()) return;
+    this.editingExpense.set(expense);
+    this.expenseFormError.set(null);
+    this.expenseEditorOpen.set(true);
+    this.expenseDialog().nativeElement.showModal();
+  }
+
+  closeExpenseEditor(): void {
+    if (this.expenseSaving()) return;
+    this.expenseEditorOpen.set(false);
+    this.expenseDialog().nativeElement.close();
+  }
+
+  saveExpense(request: SaveExpenseRequest): void {
+    const report = this.viewingReport();
+    if (!report || this.expenseSaving()) return;
+    const expense = this.editingExpense();
+    this.expenseSaving.set(true);
+    this.expenseFormError.set(null);
+    const operation = expense
+      ? this.expensesApi.update(report.id, expense.id, request)
+      : this.expensesApi.create(report.id, request);
+    operation.pipe(finalize(() => this.expenseSaving.set(false))).subscribe({
+      next: () => {
+        this.expenseEditorOpen.set(false);
+        this.expenseDialog().nativeElement.close();
+        this.loadExpenses(report.id, expense ? this.currentPage() : 1);
+      },
+      error: err => this.expenseFormError.set(apiErrorMessage(err)),
+    });
+  }
+
+  requestExpenseDelete(expense: ExpenseDto): void {
+    if (this.expenseDeleting()) return;
+    this.expenseToDelete.set(expense);
+    this.expenseDeleteError.set(null);
+    this.expenseDeleteDialog().nativeElement.showModal();
+  }
+
+  closeExpenseDelete(): void {
+    if (this.expenseDeleting()) return;
+    this.expenseToDelete.set(null);
+    this.expenseDeleteDialog().nativeElement.close();
+  }
+
+  confirmExpenseDelete(): void {
+    const report = this.viewingReport();
+    const expense = this.expenseToDelete();
+    if (!report || !expense || this.expenseDeleting()) return;
+    this.expenseDeleting.set(true);
+    this.expenseDeleteError.set(null);
+    this.expensesApi.delete(report.id, expense.id).pipe(
+      finalize(() => this.expenseDeleting.set(false)),
+    ).subscribe({
+      next: () => {
+        this.expenseToDelete.set(null);
+        this.expenseDeleteDialog().nativeElement.close();
+        const page = this.expensePage();
+        const remaining = Math.max(0, (page?.totalCount ?? 1) - 1);
+        this.loadExpenses(report.id, Math.min(this.currentPage(), this.pageCount(remaining)));
+      },
+      error: err => this.expenseDeleteError.set(apiErrorMessage(err)),
+    });
+  }
+
+  onExpenseCancel(event: Event): void {
+    if (this.expenseSaving()) { event.preventDefault(); return; }
+    this.expenseEditorOpen.set(false);
+  }
+
+  onExpenseDeleteCancel(event: Event): void {
+    if (this.expenseDeleting()) { event.preventDefault(); return; }
+    this.expenseToDelete.set(null);
   }
 
   requestDelete(report: ReportDto): void {

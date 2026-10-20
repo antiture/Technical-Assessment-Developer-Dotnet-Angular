@@ -1,4 +1,4 @@
-<form [formGroup]="form" (ngSubmit)="submit()" class="report-form">
+<div [formGroup]="form" class="report-form">
   <label for="report-user">Utilisateur actif</label>
   <select id="report-user" formControlName="userId">
     <option value="">Sélectionner un utilisateur</option>
@@ -22,8 +22,17 @@
   @if (form.controls.year.touched && form.controls.year.invalid) {
     <small role="alert">L'année doit être comprise entre 1 et 9999.</small>
   }
+  <label class="optional-toggle">
+    <input type="checkbox" [checked]="includeExpense()" (change)="includeExpense.set(!includeExpense()); firstExpense.set(null)" />
+    Ajouter une première dépense (facultatif)
+  </label>
+  @if (includeExpense()) {
+    <app-expense-form [year]="form.controls.year.value" [month]="form.controls.month.value"
+      [saving]="saving()" (saved)="onFirstExpense($event)" (cancelled)="includeExpense.set(false); firstExpense.set(null)" />
+  } @else {
   <div class="actions">
     <button type="button" class="secondary" [disabled]="saving()" (click)="cancelled.emit()">Annuler</button>
-    <button type="submit" [disabled]="saving() || eligibleUsers().length === 0">{{ saving() ? 'Enregistrement…' : 'Créer' }}</button>
+    <button type="button" (click)="submit()" [disabled]="saving() || eligibleUsers().length === 0">{{ saving() ? 'Enregistrement…' : 'Créer' }}</button>
   </div>
-</form>
+  }
+</div>
