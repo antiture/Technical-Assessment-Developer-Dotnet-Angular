@@ -1,3 +1,4 @@
+
 using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -74,6 +75,9 @@ internal static class ExpenseEndpoints
         {
             // One EF execution strategy must own the transaction on the SAME DbContext.
             // Each retry discards tracked entities from a failed attempt.
+            // Reuse the same primary key on every retry (including unknown COMMIT outcomes).
+            // This protects this HTTP execution; it is not a cross-request idempotency key.
+            var expenseId = Guid.NewGuid();
             var strategy = db.Database.CreateExecutionStrategy();
             return await strategy.ExecuteAsync(async () =>
             {
@@ -89,7 +93,7 @@ internal static class ExpenseEndpoints
                 {
                     expense = Expense.Create(reportId, report.Year, report.Month, request.Date,
                         request.Description, request.Amount, request.Store, request.Street,
-                        request.PostalCode, request.City);
+                        request.PostalCode, request.City, expenseId);
                 }
                 catch (ArgumentException ex)
                 {
@@ -100,6 +104,14 @@ internal static class ExpenseEndpoints
                 var key = $"expense-quota:{report.UserId:N}:{report.Year:D4}:{report.Month:D2}";
                 await db.Database.ExecuteSqlInterpolatedAsync(
                     $"SELECT pg_advisory_xact_lock(hashtextextended({key}, 0))", ct);
+
+                // If COMMIT succeeded but the acknowledgement was lost, a replay
+                // must return the already-created expense instead of inserting twice.
+                // Check under the same quota lock, before applying the quota limit.
+                var existing = await db.Set<Expense>().AsNoTracking()
+                    .SingleOrDefaultAsync(e => e.Id == expenseId, ct);
+                if (existing is not null)
+                    return Results.Created($"/expense-reports/{reportId}/expenses/{expenseId}", ToExpense(existing));
 
                 var policy = await policyReader.GetAsync(report.UserId, ct);
                 if (policy is null || !policy.IsEligible)

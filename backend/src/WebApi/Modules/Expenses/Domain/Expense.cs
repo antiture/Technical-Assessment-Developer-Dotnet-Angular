@@ -1,3 +1,4 @@
+
 namespace WebApi.Modules.Expenses.Domain;
 
 internal sealed class Expense
@@ -15,10 +16,11 @@ internal sealed class Expense
     private Expense() { }
 
     public static Expense Create(Guid reportId, int year, int month, DateOnly date, string? description,
-        decimal amount, string? store, string? street, string? postalCode, string? city)
+        decimal amount, string? store, string? street, string? postalCode, string? city, Guid? id = null)
     {
+        if (id == Guid.Empty) throw new ArgumentException("Expense ID cannot be empty.");
         if (reportId == Guid.Empty) throw new ArgumentException("Report is required.");
-        var expense = new Expense { Id = Guid.NewGuid(), ExpenseReportId = reportId };
+        var expense = new Expense { Id = id ?? Guid.NewGuid(), ExpenseReportId = reportId };
         expense.Update(year, month, date, description, amount, store, street, postalCode, city);
         return expense;
     }

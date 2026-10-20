@@ -1,3 +1,4 @@
+
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -132,10 +133,11 @@ public sealed class ExpensesApiConcurrencyReviewTests
             var createTask = Task.Run(Post);
             var deleteTask = Task.Run(Delete);
             gate.Set();
-            await Task.WhenAll(createTask, deleteTask);
-            Assert.Equal(HttpStatusCode.NoContent, deleteTask.Result);
-            Assert.True(createTask.Result is HttpStatusCode.Created or HttpStatusCode.NotFound or HttpStatusCode.Conflict,
-                $"Unexpected concurrent create status: {(int)createTask.Result} ({createTask.Result}).");
+            var createStatus = await createTask;
+            var deleteStatus = await deleteTask;
+            Assert.Equal(HttpStatusCode.NoContent, deleteStatus);
+            Assert.True(createStatus is HttpStatusCode.Created or HttpStatusCode.NotFound or HttpStatusCode.Conflict,
+                $"Unexpected concurrent create status: {(int)createStatus} ({createStatus}).");
             using var report = await client.GetAsync(path);
             Assert.Equal(HttpStatusCode.NotFound, report.StatusCode);
             using var expenses = await client.GetAsync(path + "/expenses?page=1");
