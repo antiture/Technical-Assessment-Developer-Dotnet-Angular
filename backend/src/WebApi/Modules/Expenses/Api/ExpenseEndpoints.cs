@@ -112,7 +112,17 @@ internal static class ExpenseEndpoints
                     return Results.Conflict(new { error = $"Monthly expense quota reached ({policy.MonthlyExpenseLimit})." });
 
                 db.Set<Expense>().Add(expense);
-                await db.SaveChangesAsync(ct);
+                try
+                {
+                    await db.SaveChangesAsync(ct);
+                }
+                catch (DbUpdateException ex) when (IsReportForeignKeyViolation(ex))
+                {
+                    // The report may have been deleted after it was read by this transaction.
+                    // Disposing the uncommitted transaction rolls it back.
+                    return Results.Conflict(new { error = "The expense report was deleted concurrently." });
+                }
+
                 await tx.CommitAsync(ct);
                 return Results.Created($"/expense-reports/{reportId}/expenses/{expense.Id}", ToExpense(expense));
             });
@@ -146,6 +156,12 @@ internal static class ExpenseEndpoints
 
     private static bool IsUniqueViolation(DbUpdateException e) =>
         e.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation };
+    private static bool IsReportForeignKeyViolation(DbUpdateException e) =>
+        e.InnerException is PostgresException
+        {
+            SqlState: PostgresErrorCodes.ForeignKeyViolation,
+            ConstraintName: "FK_expenses_expense_reports_ExpenseReportId"
+        };
     private static ReportDto ToReport(ExpenseReport r) => new(r.Id, r.UserId, r.Year, r.Month,
         $"{r.UserDisplayName} - {French.DateTimeFormat.GetMonthName(r.Month).ToTitleCase(French)} {r.Year}");
     private static ExpenseDto ToExpense(Expense e) => new(e.Id, e.ExpenseReportId, e.Date,
