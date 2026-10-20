@@ -1,0 +1,81 @@
+<section class="reports-page">
+  <header class="heading">
+    <div><h1>Notes de frais</h1><p>Gestion des notes de frais mensuelles</p></div>
+    <button type="button" (click)="openCreate()">Nouvelle note de frais</button>
+  </header>
+
+  @if (error()) { <p role="alert" class="error">{{ error() }}</p> }
+  @if (loading()) { <p role="status">Chargement des notes de frais…</p> }
+  @else {
+    <div class="panel">
+      @if (reports().length === 0) { <p>Aucune note de frais.</p> }
+      @else {
+        <table>
+          <thead><tr><th>Intitulé</th><th>Mois</th><th>Actions</th></tr></thead>
+          <tbody>
+            @for (report of reports(); track report.id) {
+              <tr>
+                <td>{{ report.title }}</td>
+                <td>{{ report.month }}/{{ report.year }}</td>
+                <td class="actions-cell">
+                  <button type="button" class="link" (click)="openDetail(report)">Consulter</button>
+                  <button type="button" class="link danger" (click)="requestDelete(report)">Supprimer</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  }
+
+  <dialog #detailDialog aria-labelledby="detail-report-title" (cancel)="onDetailCancel()">
+    <div class="dialog-heading">
+      <h2 id="detail-report-title">Consulter une note de frais</h2>
+      <button type="button" class="close" aria-label="Fermer" (click)="closeDetail()">×</button>
+    </div>
+    @if (detailLoading()) {
+      <p role="status">Chargement de la note de frais…</p>
+    } @else if (detailError()) {
+      <p role="alert" class="error">{{ detailError() }}</p>
+    } @else if (viewingReport(); as report) {
+      <dl class="report-details">
+        <div><dt>Intitulé</dt><dd>{{ report.title }}</dd></div>
+        <div><dt>Utilisateur (ID)</dt><dd>{{ report.userId }}</dd></div>
+        <div><dt>Mois</dt><dd>{{ report.month }}/{{ report.year }}</dd></div>
+      </dl>
+      <p class="detail-note">La consultation des dépenses sera intégrée dans le Commit 05.</p>
+    }
+    <div class="dialog-actions">
+      <button type="button" class="secondary" (click)="closeDetail()">Fermer</button>
+    </div>
+  </dialog>
+
+  <dialog #createDialog aria-labelledby="create-report-title" (cancel)="onCreateCancel($event)">
+    <div class="dialog-heading">
+      <h2 id="create-report-title">Créer une note de frais</h2>
+      <button type="button" class="close" aria-label="Fermer" [disabled]="saving()" (click)="closeCreate()">×</button>
+    </div>
+    @if (usersLoading()) { <p role="status">Chargement des utilisateurs actifs…</p> }
+    @else if (usersError()) { <p class="error" role="alert">{{ usersError() }}</p> }
+    @else {
+      @if (eligibleUsers().length === 0) { <p>Aucun utilisateur actif disponible.</p> }
+      <app-report-form [eligibleUsers]="eligibleUsers()" [saving]="saving()"
+        (saved)="create($event)" (cancelled)="closeCreate()" />
+    }
+    @if (formError()) { <p class="error" role="alert">{{ formError() }}</p> }
+  </dialog>
+
+  <dialog #deleteDialog aria-labelledby="delete-report-title" (cancel)="onDeleteCancel($event)">
+    <div class="dialog-heading">
+      <h2 id="delete-report-title">Supprimer la note de frais ?</h2>
+      <button type="button" class="close" aria-label="Fermer" [disabled]="deleting()" (click)="closeDelete()">×</button>
+    </div>
+    <p>La suppression de « {{ deletingReport()?.title }} » est définitive et supprime aussi ses dépenses.</p>
+    @if (deleteError()) { <p role="alert" class="error">{{ deleteError() }}</p> }
+    <div class="dialog-actions">
+      <button type="button" class="secondary" [disabled]="deleting()" (click)="closeDelete()">Annuler</button>
+      <button type="button" class="danger-button" [disabled]="deleting()" (click)="confirmDelete()">Supprimer</button>
+    </div>
+  </dialog>
+</section>

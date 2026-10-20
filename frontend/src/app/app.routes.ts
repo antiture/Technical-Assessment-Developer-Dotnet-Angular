@@ -9,7 +9,7 @@ export const appRoutes: Routes = [
   {
     path: 'expense-reports',
     pathMatch: 'full',
-    loadComponent: () => import('./features/expense-reports/reports-placeholder.page').then(m => m.ReportsPlaceholderPage),
+    loadComponent: () => import('./features/expense-reports/report-list.page').then(m => m.ReportListPage),
   },
   {
     path: 'expense-reports/:id',

@@ -1,27 +1,86 @@
 <section class="users-page">
-      <div class="heading"><div><h1>Utilisateurs</h1><p>Gestion des profils et des plafonds mensuels</p></div>
-        <button type="button" (click)="startCreate()">Nouvel utilisateur</button>
+  <div class="heading">
+    <div>
+      <h1>Utilisateurs</h1>
+      <p>Gestion des profils et des plafonds mensuels</p>
+    </div>
+    <button type="button" (click)="startCreate()">Nouvel utilisateur</button>
+  </div>
+
+  @if (actionError()) { <p class="error" role="alert">{{ actionError() }}</p> }
+
+  @if (loading()) {
+    <p role="status">Chargement des utilisateurs…</p>
+  } @else {
+    <div class="panel">
+      @if (users().length === 0) {
+        <p>Aucun utilisateur.</p>
+      } @else {
+        <table>
+          <thead><tr><th>Nom</th><th>Statut</th><th>Actions</th></tr></thead>
+          <tbody>
+            @for (item of users(); track item.id) {
+              <tr>
+                <td>{{ item.name }}</td>
+                <td>
+                  @if (activity()[item.id] === true) {
+                    <span class="status status-active">Actif</span>
+                  } @else if (activity()[item.id] === false) {
+                    <span class="status status-inactive">Inactif</span>
+                  } @else {
+                    <span class="status status-unknown">Indisponible</span>
+                  }
+                </td>
+                <td class="row-actions">
+                  <button class="link" type="button" [disabled]="!!actionBusyId()" (click)="startEdit(item.id)">Modifier</button>
+                  @if (activity()[item.id] === false) {
+                    <button class="link" type="button" [disabled]="!!actionBusyId()" (click)="changeActive(item.id, true)">Activer</button>
+                  } @else if (activity()[item.id] === true) {
+                    <button class="link" type="button" [disabled]="!!actionBusyId()" (click)="changeActive(item.id, false)">Désactiver</button>
+                  }
+                  <button class="link danger" type="button" [disabled]="!!actionBusyId()" (click)="requestDelete(item.id)">Supprimer</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  }
+
+  <dialog #deleteDialog class="user-dialog delete-dialog" aria-labelledby="delete-title" (cancel)="cancelDelete($event)">
+    @if (confirmingDelete(); as user) {
+      <h2 id="delete-title">Supprimer cet utilisateur ?</h2>
+      <p>{{ user.firstName }} {{ user.lastName }} sera supprimé de la liste (suppression logique).</p>
+      @if (actionError()) { <p class="error" role="alert">{{ actionError() }}</p> }
+      <div class="delete-actions">
+        <button type="button" class="secondary" [disabled]="!!actionBusyId()" (click)="cancelDelete()">Annuler</button>
+        <button type="button" class="danger-button" [disabled]="!!actionBusyId()" (click)="confirmDelete()">Confirmer la suppression</button>
+      </div>
+    }
+  </dialog>
+
+  <!-- Kept in the DOM: showModal() must be called synchronously from the click handler. -->
+  <dialog #editorDialog class="user-dialog" aria-labelledby="user-dialog-title" (cancel)="onDialogCancel($event)">
+    @if (editorOpen()) {
+      <div class="dialog-header">
+        <h2 id="user-dialog-title">{{ editingId() ? 'Modifier un utilisateur' : 'Créer un utilisateur' }}</h2>
+        <button class="close" type="button" aria-label="Fermer" [disabled]="saving()" (click)="closeEditor()">×</button>
       </div>
       @if (error()) { <p role="alert" class="error">{{ error() }}</p> }
-      @if (loading()) { <p role="status">Chargement des utilisateurs…</p> }
-      @else {
-        <div class="panel">
-          @if (users().length === 0) { <p>Aucun utilisateur.</p> }
-          @else {
-            <table><thead><tr><th>Nom</th><th>Action</th></tr></thead><tbody>
-            @for (item of users(); track item.id) {
-              <tr><td>{{ item.name }}</td><td><button class="link" type="button" (click)="startEdit(item.id)">Modifier</button></td></tr>
-            }
-            </tbody></table>
-          }
-        </div>
+      @if (detailLoading()) {
+        <p role="status">Chargement du profil…</p>
+      } @else if (detailError()) {
+        <p class="error" role="alert">{{ detailError() }}</p>
+        <button type="button" class="secondary" (click)="closeEditor()">Fermer</button>
+      } @else {
+        <app-user-form
+          [user]="editingUser()"
+          [saving]="saving()"
+          (saved)="save($event)"
+          (cancelled)="closeEditor()"
+        />
       }
-      @if (editorOpen()) {
-        <section class="panel editor" aria-label="Formulaire utilisateur">
-          <h2>{{ editingId() ? 'Modifier un utilisateur' : 'Créer un utilisateur' }}</h2>
-          @if (detailLoading()) { <p role="status">Chargement du profil…</p> }
-          @else if (detailError()) { <p class="error" role="alert">{{ detailError() }}</p> }
-          @else { <app-user-form [user]="editingUser()" [saving]="saving()" (saved)="save($event)" (cancelled)="closeEditor()" /> }
-        </section>
-      }
-    </section>
+    }
+  </dialog>
+</section>

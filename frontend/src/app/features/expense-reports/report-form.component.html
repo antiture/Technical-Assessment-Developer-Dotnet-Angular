@@ -1,0 +1,29 @@
+<form [formGroup]="form" (ngSubmit)="submit()" class="report-form">
+  <label for="report-user">Utilisateur actif</label>
+  <select id="report-user" formControlName="userId">
+    <option value="">Sélectionner un utilisateur</option>
+    @for (user of eligibleUsers(); track user.id) {
+      <option [value]="user.id">{{ user.name }}</option>
+    }
+  </select>
+  @if (form.controls.userId.touched && form.controls.userId.invalid) {
+    <small role="alert">Veuillez choisir un utilisateur actif.</small>
+  }
+  <div class="date-fields">
+    <div><label for="report-month">Mois</label>
+      <select id="report-month" formControlName="month">
+        @for (month of months; track $index) { <option [value]="$index + 1">{{ month }}</option> }
+      </select>
+    </div>
+    <div><label for="report-year">Année</label>
+      <input id="report-year" type="number" min="1" max="9999" step="1" formControlName="year" />
+    </div>
+  </div>
+  @if (form.controls.year.touched && form.controls.year.invalid) {
+    <small role="alert">L'année doit être comprise entre 1 et 9999.</small>
+  }
+  <div class="actions">
+    <button type="button" class="secondary" [disabled]="saving()" (click)="cancelled.emit()">Annuler</button>
+    <button type="submit" [disabled]="saving() || eligibleUsers().length === 0">{{ saving() ? 'Enregistrement…' : 'Créer' }}</button>
+  </div>
+</form>
