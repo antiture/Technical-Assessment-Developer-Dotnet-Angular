@@ -1,5 +1,3 @@
-using WebApi.Modules.Users.Contracts;
-using WebApi.Modules.Users.Infrastructure;
 using WebApi.Modules.Expenses.Api;
 using Microsoft.EntityFrameworkCore;
 using System.Diagnostics.CodeAnalysis;
@@ -16,9 +14,8 @@ builder.AddNpgsqlDbContext<AppDbContext>(connectionName: "database",
             await AppDbContext.SeedAsync(context, cancellationToken)));
 builder.Services
     .AddOpenApi()
-    .AddPersistence();
+    .AddModuleServices();
 builder.Services.AddHealthChecks();
-builder.Services.AddScoped<IUserPolicyReader, UserPolicyReader>();
 
 var app = builder.Build();
 

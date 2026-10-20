@@ -107,3 +107,14 @@ Une modification ultérieure du nom ou du prénom de l'utilisateur **ne modifie 
 
 **Compromis assumé :** l'intitulé historique peut différer du nom actuel de l'utilisateur. L'identifiant `UserId` reste la référence technique de l'utilisateur affecté.
 
+### Architecture — monolithe modulaire
+
+L’application est déployée en un seul processus ASP.NET Core et structurée en deux modules fonctionnels, **Users** et **Expenses**, avec des dossiers API, Domain et Infrastructure. Nous avons choisi un **monolithe modulaire**, sans microservices ni communication réseau entre modules, afin de limiter le coût opérationnel et la complexité de ce TP.
+
+Le module **Expenses** accède aux informations nécessaires du module **Users** uniquement via le contrat `IUserPolicyReader` (`Users.Contracts`) ; il n’accède pas directement aux entités `Users.Domain` ou à leur infrastructure. La dépendance métier est donc orientée **Expenses → Users.Contracts**. Les enregistrements de dépenses conservent l’identifiant de l’utilisateur au travers de leur note de frais, sans imposer une dépendance de domaine directe vers l’entité User.
+
+Les modules utilisent volontairement un **`AppDbContext` partagé** et une même base PostgreSQL. Ce compromis simplifie la configuration Aspire, les migrations EF Core et les opérations transactionnelles dans le périmètre du test. Il ne garantit toutefois **pas une isolation stricte** : un développeur pourrait accéder aux entités d’un autre module via le contexte partagé.
+
+Trois tests `ArchitectureBoundaryTests` contrôlent les **références explicites de namespaces dans les fichiers C#** : absence de dépendance d’`Expenses.Domain` vers Users, accès d’Expenses à `Users.Contracts` uniquement, et absence de dépendance de Users vers Expenses. Comme les modules résident dans un **même assembly**, ces tests sont des garde-fous de source, **pas une preuve d’isolation complète** (ils ne détectent pas toutes les dépendances sémantiques, ni les références par réflexion). Une évolution du projet pourrait utiliser des assemblies distincts et des tests d’architecture basés sur Roslyn.
+
+L’enregistrement des services intermodules est centralisé dans `AddModuleServices()`. Les endpoints Minimal API gardent ici la logique d’orchestration applicative : une couche Application dédiée ne serait envisagée que si la complexité fonctionnelle justifiait cette abstraction supplémentaire.
