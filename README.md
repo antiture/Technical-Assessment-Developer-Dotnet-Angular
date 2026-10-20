@@ -91,4 +91,19 @@ La page de visualisation d'une note de frais permet :
 
 ## Mes Notes
 
-À compléter par vos soins.
+### Choix de conception — suppression des notes de frais
+
+Une note de frais (`ExpenseReport`) peut être supprimée **physiquement**, conformément au besoin fonctionnel. Sa suppression entraîne celle de toutes les dépenses (`Expense`) qui lui sont rattachées grâce à la relation PostgreSQL / EF Core configurée avec `ON DELETE CASCADE`. Cela garantit qu'aucune dépense orpheline ne subsiste.
+
+La suppression d'une **dépense individuelle** reste **logique** (`soft delete`), comme le demande également l'énoncé. Ces deux actions ont donc volontairement des sémantiques distinctes : suppression logique d'une dépense isolée, suppression physique d'une note de frais et de ses dépenses.
+
+**Limite / évolution possible :** si le système devait répondre à des exigences d'audit, de conservation comptable ou de traçabilité réglementaire, une stratégie d'archivage et de rétention des données serait préférable à une suppression définitive.
+
+### Choix de conception — intitulé et nom de l'utilisateur
+
+Lors de sa création, une note de frais conserve une **copie du nom affiché de l'utilisateur** (`UserDisplayName`). Son intitulé est construit au format requis `Utilisateur - Mois Année` et n'est pas éditable.
+
+Une modification ultérieure du nom ou du prénom de l'utilisateur **ne modifie pas rétroactivement** l'intitulé des notes de frais existantes. Ce choix assure la stabilité de l'intitulé historique et évite une dépendance de lecture en temps réel au module Users pour sa construction.
+
+**Compromis assumé :** l'intitulé historique peut différer du nom actuel de l'utilisateur. L'identifiant `UserId` reste la référence technique de l'utilisateur affecté.
+
