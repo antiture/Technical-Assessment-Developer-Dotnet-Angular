@@ -75,14 +75,10 @@ internal static class ExpenseEndpoints
             // One EF execution strategy must own the transaction on the SAME DbContext.
             // Each retry discards tracked entities from a failed attempt.
             var strategy = db.Database.CreateExecutionStrategy();
-            Console.WriteLine($"[Expense] Strategy={strategy.GetType().Name}");
-            Console.WriteLine($"[Expense] Before ExecuteAsync: Transaction={db.Database.CurrentTransaction is not null}");
             return await strategy.ExecuteAsync(async () =>
             {
-                Console.WriteLine($"[Expense] Inside ExecuteAsync: Transaction={db.Database.CurrentTransaction is not null}");
                 db.ChangeTracker.Clear();
                 await using var tx = await db.Database.BeginTransactionAsync(ct);
-                Console.WriteLine($"[Expense] After BeginTransactionAsync: Transaction={db.Database.CurrentTransaction is not null}");
 
                 var report = await db.Set<ExpenseReport>().AsNoTracking()
                     .SingleOrDefaultAsync(r => r.Id == reportId, ct);
