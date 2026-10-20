@@ -22,7 +22,37 @@ namespace WebApi.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("WebApi.Modules.Users.Domain.User", b =>
+            modelBuilder.Entity<WebApi.Modules.Expenses.Domain.ExpenseReport>(b =>
+                {
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uuid");
+                    b.Property<Guid>("UserId").HasColumnType("uuid");
+                    b.Property<int>("Year").HasColumnType("integer");
+                    b.Property<int>("Month").HasColumnType("integer");
+                    b.Property<string>("UserDisplayName").IsRequired().HasMaxLength(201).HasColumnType("character varying(201)");
+                    b.HasKey("Id");
+                    b.HasIndex("UserId", "Year", "Month").IsUnique();
+                    b.ToTable("expense_reports", (string)null);
+                });
+
+            modelBuilder.Entity<WebApi.Modules.Expenses.Domain.Expense>(b =>
+                {
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uuid");
+                    b.Property<Guid>("ExpenseReportId").HasColumnType("uuid");
+                    b.Property<DateOnly>("Date").HasColumnType("date");
+                    b.Property<string>("Description").IsRequired().HasMaxLength(50).HasColumnType("character varying(50)");
+                    b.Property<decimal>("Amount").HasColumnType("numeric(18,2)");
+                    b.Property<string>("Store").IsRequired().HasMaxLength(200).HasColumnType("character varying(200)");
+                    b.Property<string>("Street").IsRequired().HasMaxLength(200).HasColumnType("character varying(200)");
+                    b.Property<string>("PostalCode").IsRequired().HasMaxLength(20).HasColumnType("character varying(20)");
+                    b.Property<string>("City").IsRequired().HasMaxLength(100).HasColumnType("character varying(100)");
+                    b.Property<bool>("IsDeleted").HasColumnType("boolean");
+                    b.HasKey("Id");
+                    b.HasIndex("ExpenseReportId", "Date", "Id");
+                    b.ToTable("expenses", (string)null);
+                    b.HasQueryFilter((WebApi.Modules.Expenses.Domain.Expense e) => !e.IsDeleted);
+                });
+
+            modelBuilder.Entity<WebApi.Modules.Users.Domain.User>(b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -60,6 +90,15 @@ namespace WebApi.Infrastructure.Persistence.Migrations
 
                     b.ToTable("users", (string)null);
                 });
+            modelBuilder.Entity<WebApi.Modules.Expenses.Domain.Expense>(b =>
+                {
+                    b.HasOne("WebApi.Modules.Expenses.Domain.ExpenseReport", null)
+                        .WithMany("Expenses")
+                        .HasForeignKey("ExpenseReportId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
 #pragma warning restore 612, 618
         }
     }

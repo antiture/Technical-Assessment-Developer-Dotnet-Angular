@@ -1,3 +1,6 @@
+using WebApi.Modules.Users.Contracts;
+using WebApi.Modules.Users.Infrastructure;
+using WebApi.Modules.Expenses.Api;
 using Microsoft.EntityFrameworkCore;
 using System.Diagnostics.CodeAnalysis;
 using WebApi.Infrastructure.Api;
@@ -15,6 +18,7 @@ builder.Services
     .AddOpenApi()
     .AddPersistence();
 builder.Services.AddHealthChecks();
+builder.Services.AddScoped<IUserPolicyReader, UserPolicyReader>();
 
 var app = builder.Build();
 
@@ -38,6 +42,7 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.MapUserEndpoints();
+app.MapExpenseEndpoints();
 app.MapHealthChecks("/health");
 
 app.Run();

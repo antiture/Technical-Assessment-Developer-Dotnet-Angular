@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using WebApi.Modules.Expenses.Infrastructure;
 using WebApi.Modules.Users.Domain;
 using WebApi.Modules.Users.Infrastructure;
 
@@ -10,6 +11,8 @@ internal sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbC
     {
         base.OnModelCreating(modelBuilder);
         modelBuilder.ApplyConfiguration(new UserEntityTypeConfiguration());
+        modelBuilder.ApplyConfiguration(new ExpenseReportConfiguration());
+        modelBuilder.ApplyConfiguration(new ExpenseConfiguration());
     }
 
     internal static async Task SeedAsync(DbContext context, CancellationToken cancellationToken)
