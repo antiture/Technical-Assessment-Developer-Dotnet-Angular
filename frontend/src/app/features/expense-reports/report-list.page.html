@@ -39,12 +39,48 @@
     } @else if (detailError()) {
       <p role="alert" class="error">{{ detailError() }}</p>
     } @else if (viewingReport(); as report) {
-      <dl class="report-details">
-        <div><dt>Intitulé</dt><dd>{{ report.title }}</dd></div>
-        <div><dt>Utilisateur (ID)</dt><dd>{{ report.userId }}</dd></div>
-        <div><dt>Mois</dt><dd>{{ report.month }}/{{ report.year }}</dd></div>
-      </dl>
-      <p class="detail-note">La consultation des dépenses sera intégrée dans le Commit 05.</p>
+      <div class="report-summary">
+        <strong>{{ report.title }}</strong>
+        <span>Note de frais · {{ report.month }}/{{ report.year }}</span>
+      </div>
+      <section class="expense-section" aria-label="Dépenses">
+        <h3>Dépenses</h3>
+        @if (expensesLoading()) {
+          <p role="status">Chargement des dépenses…</p>
+        } @else if (expensesError()) {
+          <p role="alert" class="error">{{ expensesError() }}</p>
+          <button type="button" class="secondary" (click)="loadExpenses(report.id, currentPage())">Réessayer</button>
+        } @else if (expensePage(); as result) {
+          @if (result.items.length === 0) {
+            <p>Aucune dépense.</p>
+          } @else {
+            <div class="expenses-table-wrapper">
+              <table class="expenses-table">
+                <thead>
+                  <tr><th scope="col">Libellé</th><th scope="col">Date</th><th scope="col">Adresse de facturation</th><th scope="col" class="amount">Montant</th></tr>
+                </thead>
+                <tbody>
+                  @for (expense of result.items; track expense.id) {
+                    <tr>
+                      <td>{{ expense.description }}</td>
+                      <td>{{ formatExpenseDate(expense.date) }}</td>
+                      <td>{{ expense.store }} · {{ expense.street }}, {{ expense.postalCode }} {{ expense.city }}</td>
+                      <td class="amount">{{ formatAmount(expense.amount) }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+          <div class="pagination">
+            <span>{{ result.totalCount }} dépense(s) · Page {{ currentPage() }} / {{ pageCount(result.totalCount) }}</span>
+            <div class="pagination-actions">
+              <button type="button" class="secondary" [disabled]="currentPage() <= 1" (click)="changePage(currentPage() - 1)">Précédent</button>
+              <button type="button" class="secondary" [disabled]="currentPage() >= pageCount(result.totalCount)" (click)="changePage(currentPage() + 1)">Suivant</button>
+            </div>
+          </div>
+        }
+      </section>
     }
     <div class="dialog-actions">
       <button type="button" class="secondary" (click)="closeDetail()">Fermer</button>

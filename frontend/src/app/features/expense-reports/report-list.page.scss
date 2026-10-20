@@ -118,7 +118,50 @@ dialog {
   }
 }
 
-.detail-note {
-  margin-top: 1.5rem;
-  color: #64748b;
+dialog[aria-labelledby="detail-report-title"] {
+  width: min(1000px, calc(100vw - 32px));
 }
+
+.report-summary {
+  display: grid;
+  gap: 0.4rem;
+  margin-bottom: 1.5rem;
+
+  span {
+    color: #64748b;
+  }
+}
+
+.expense-section {
+  h3 {
+    margin: 0 0 1rem;
+  }
+}
+
+.expenses-table-wrapper {
+  overflow-x: auto;
+}
+
+.expenses-table {
+  min-width: 640px;
+
+  .amount {
+    text-align: right;
+    white-space: nowrap;
+  }
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.25rem;
+  color: #475569;
+}
+
+.pagination-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+

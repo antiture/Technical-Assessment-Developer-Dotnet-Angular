@@ -1,7 +1,8 @@
 import { ChangeDetectionStrategy, Component, ElementRef, inject, OnInit, signal, viewChild } from '@angular/core';
 import { catchError, finalize, forkJoin, map, of, switchMap } from 'rxjs';
 import { apiErrorMessage } from '../../core/api/api-error';
-import { CreateReportRequest, ReportDto, UserInfo } from '../../core/api/api.models';
+import { CreateReportRequest, ExpensePage, ReportDto, UserInfo } from '../../core/api/api.models';
+import { ExpensesApiService } from '../../core/api/expenses-api.service';
 import { ReportsApiService } from '../../core/api/reports-api.service';
 import { UsersApiService } from '../../core/api/users-api.service';
 import { ReportFormComponent } from './report-form.component';
@@ -15,6 +16,7 @@ import { ReportFormComponent } from './report-form.component';
 })
 export class ReportListPage implements OnInit {
   private readonly reportsApi = inject(ReportsApiService);
+  private readonly expensesApi = inject(ExpensesApiService);
   private readonly usersApi = inject(UsersApiService);
   private readonly createDialog = viewChild.required<ElementRef<HTMLDialogElement>>('createDialog');
   private readonly deleteDialog = viewChild.required<ElementRef<HTMLDialogElement>>('deleteDialog');
@@ -35,6 +37,10 @@ export class ReportListPage implements OnInit {
   readonly viewingReport = signal<ReportDto | null>(null);
   readonly detailLoading = signal(false);
   readonly detailError = signal<string | null>(null);
+  readonly expensePage = signal<ExpensePage | null>(null);
+  readonly expensesLoading = signal(false);
+  readonly expensesError = signal<string | null>(null);
+  readonly currentPage = signal(1);
   private detailToken = 0;
   private usersToken = 0;
 
@@ -101,7 +107,11 @@ export class ReportListPage implements OnInit {
     this.viewingReport.set(report);
     this.detailError.set(null);
     this.detailLoading.set(true);
+    this.expensePage.set(null);
+    this.expensesError.set(null);
+    this.currentPage.set(1);
     this.detailDialog().nativeElement.showModal();
+    this.loadExpenses(report.id, 1, token);
     this.reportsApi.get(report.id).subscribe({
       next: details => {
         if (token !== this.detailToken) return;
@@ -116,10 +126,52 @@ export class ReportListPage implements OnInit {
     });
   }
 
+  loadExpenses(reportId: string, page: number, token = this.detailToken): void {
+    if (token !== this.detailToken || page < 1) return;
+    this.currentPage.set(page);
+    this.expensesLoading.set(true);
+    this.expensesError.set(null);
+    this.expensesApi.list(reportId, page).subscribe({
+      next: result => {
+        if (token !== this.detailToken || page !== this.currentPage()) return;
+        this.expensePage.set(result);
+        this.expensesLoading.set(false);
+      },
+      error: err => {
+        if (token !== this.detailToken || page !== this.currentPage()) return;
+        this.expensesError.set(apiErrorMessage(err));
+        this.expensesLoading.set(false);
+      },
+    });
+  }
+
+  pageCount(total: number): number { return Math.max(1, Math.ceil(total / 5)); }
+
+  changePage(page: number): void {
+    const report = this.viewingReport();
+    const result = this.expensePage();
+    if (!report || !result || this.expensesLoading() || page < 1) return;
+    if (page > Math.max(1, Math.ceil(result.totalCount / 5))) return;
+    this.loadExpenses(report.id, page);
+  }
+
+  formatExpenseDate(value: string): string {
+    // DateOnly from API: parse components in local time, never UTC.
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+    if (!match) return value;
+    const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+    return new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }).format(date);
+  }
+
+  formatAmount(value: number): string {
+    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);
+  }
+
   closeDetail(): void {
     ++this.detailToken;
     this.detailLoading.set(false);
     this.viewingReport.set(null);
+    this.expensePage.set(null);
     this.detailDialog().nativeElement.close();
   }
 
@@ -127,6 +179,7 @@ export class ReportListPage implements OnInit {
     ++this.detailToken;
     this.detailLoading.set(false);
     this.viewingReport.set(null);
+    this.expensePage.set(null);
   }
 
   requestDelete(report: ReportDto): void {

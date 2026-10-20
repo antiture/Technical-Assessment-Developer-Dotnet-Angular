@@ -36,16 +36,20 @@ describe('ReportListPage', () => {
     fixture.componentInstance.openDetail(report);
     expect(fixture.nativeElement.querySelector('dialog[aria-labelledby="detail-report-title"]')?.open).toBe(true);
     const request = http.expectOne('/api/expense-reports/r1');
+    const expenses = http.expectOne(req => req.url === '/api/expense-reports/r1/expenses');
+    expect(expenses.request.params.get('page')).toBe('1');
+    expenses.flush({ page: 1, pageSize: 5, totalCount: 0, items: [] });
     expect(request.request.method).toBe('GET');
     request.flush(report);
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.report-details')?.textContent).toContain(report.title);
+    expect(fixture.nativeElement.querySelector('.report-summary')?.textContent).toContain(report.title);
     fixture.componentInstance.closeDetail();
     expect(fixture.nativeElement.querySelector('dialog[aria-labelledby="detail-report-title"]')?.open).toBe(false);
   });
 
   it('shows fetch failure inside the detail modal', () => {
     fixture.componentInstance.openDetail(report);
+    http.expectOne(req => req.url === '/api/expense-reports/r1/expenses').flush({ page: 1, pageSize: 5, totalCount: 0, items: [] });
     http.expectOne('/api/expense-reports/r1').flush({ error: 'Introuvable' }, { status: 404, statusText: 'Not Found' });
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('dialog[aria-labelledby="detail-report-title"] [role="alert"]')?.textContent).toContain('Introuvable');
@@ -55,9 +59,42 @@ describe('ReportListPage', () => {
   it('ignores a late detail response after closing the modal', () => {
     fixture.componentInstance.openDetail(report);
     const request = http.expectOne('/api/expense-reports/r1');
+    const expenses = http.expectOne(req => req.url === '/api/expense-reports/r1/expenses');
     fixture.componentInstance.closeDetail();
+    expenses.flush({ page: 1, pageSize: 5, totalCount: 0, items: [] });
     request.flush({ ...report, title: 'Late report' });
     expect(fixture.componentInstance.viewingReport()).toBeNull();
+  });
+
+  it('shows expense descriptions and currency and pages five items at a time', () => {
+    fixture.componentInstance.openDetail(report);
+    http.expectOne('/api/expense-reports/r1').flush(report);
+    const firstPage = http.expectOne(req => req.url === '/api/expense-reports/r1/expenses');
+    expect(firstPage.request.params.get('pageSize')).toBe('5');
+    firstPage.flush({ page: 1, pageSize: 5, totalCount: 6, items: [{
+      id: 'e1', expenseReportId: 'r1', date: '2025-10-15', description: 'Train', amount: 24.5,
+      store: 'SNCF', street: 'Rue A', postalCode: '75001', city: 'Paris',
+    }] });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.expenses-table')?.textContent).toContain('Train');
+    expect(fixture.nativeElement.querySelector('.expenses-table')?.textContent).toContain('24,50');
+    fixture.componentInstance.changePage(2);
+    const next = http.expectOne(req => req.url === '/api/expense-reports/r1/expenses');
+    expect(next.request.params.get('page')).toBe('2');
+    next.flush({ page: 2, pageSize: 5, totalCount: 6, items: [] });
+    expect(fixture.componentInstance.currentPage()).toBe(2);
+    fixture.componentInstance.closeDetail();
+  });
+
+  it('shows errors for expense requests without hiding the report', () => {
+    fixture.componentInstance.openDetail(report);
+    http.expectOne('/api/expense-reports/r1').flush(report);
+    http.expectOne(req => req.url === '/api/expense-reports/r1/expenses')
+      .flush({ error: 'Chargement impossible' }, { status: 500, statusText: 'Server Error' });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.expense-section [role="alert"]')?.textContent)
+      .toContain('Chargement impossible');
+    fixture.componentInstance.closeDetail();
   });
 
   it('filters inactive users before creation', () => {
