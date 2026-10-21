@@ -11,9 +11,5 @@ export const appRoutes: Routes = [
     pathMatch: 'full',
     loadComponent: () => import('./features/expense-reports/report-list.page').then(m => m.ReportListPage),
   },
-  {
-    path: 'expense-reports/:id',
-    loadComponent: () => import('./features/expense-reports/report-detail-placeholder.page').then(m => m.ReportDetailPlaceholderPage),
-  },
   { path: '**', redirectTo: 'expense-reports' },
 ];
