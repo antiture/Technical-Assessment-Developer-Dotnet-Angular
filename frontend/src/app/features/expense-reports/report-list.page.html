@@ -14,7 +14,7 @@
         <table>
           <thead><tr><th>Intitulé</th><th>Mois</th><th>Actions</th></tr></thead>
           <tbody>
-            @for (report of reports(); track report.id) {
+            @for (report of visibleReports(); track report.id) {
               <tr>
                 <td>{{ report.title }}</td>
                 <td>{{ report.month }}/{{ report.year }}</td>
@@ -26,6 +26,15 @@
             }
           </tbody>
         </table>
+        <nav class="report-pagination" aria-label="Pagination des notes de frais">
+          <span>{{ reports().length }} note(s) de frais · Page {{ reportPage() }} / {{ reportPageCount() }}</span>
+          <div class="report-pagination-actions">
+            <button type="button" class="secondary" [disabled]="reportPage() === 1"
+              (click)="changeReportPage(reportPage() - 1)">Précédent</button>
+            <button type="button" class="secondary" [disabled]="reportPage() === reportPageCount()"
+              (click)="changeReportPage(reportPage() + 1)">Suivant</button>
+          </div>
+        </nav>
       }
     </div>
   }

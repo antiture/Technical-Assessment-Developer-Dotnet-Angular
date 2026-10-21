@@ -32,6 +32,44 @@ describe('ReportListPage', () => {
     expect(fixture.nativeElement.querySelector('.actions-cell button.link')?.textContent).toContain('Consulter');
   });
 
+  it('paginates report listings five at a time, without affecting expense pagination', () => {
+    const six = Array.from({ length: 6 }, (_, i) => ({ ...report, id: `r${i + 1}`, title: `Note ${i + 1}` }));
+    fixture.componentInstance.reports.set(six);
+    fixture.detectChanges();
+
+    const visible = () => Array.from(fixture.nativeElement.querySelectorAll('.panel tbody tr'));
+    expect(visible()).toHaveLength(5);
+    expect(fixture.nativeElement.textContent).toContain('Page 1 / 2');
+    expect(visible()[0].textContent).toContain('Note 1');
+    fixture.componentInstance.changeReportPage(2);
+    fixture.detectChanges();
+    expect(visible()).toHaveLength(1);
+    expect(visible()[0].textContent).toContain('Note 6');
+    fixture.componentInstance.changeReportPage(3);
+    expect(fixture.componentInstance.reportPage()).toBe(2);
+  });
+
+  it('clamps the report page when a refreshed list loses its final page', () => {
+    const six = Array.from({ length: 6 }, (_, i) => ({ ...report, id: `r${i + 1}` }));
+    fixture.componentInstance.reports.set(six);
+    fixture.componentInstance.changeReportPage(2);
+    fixture.componentInstance.loadReports();
+    http.expectOne('/api/expense-reports').flush(six.slice(0, 5));
+    fixture.detectChanges();
+    expect(fixture.componentInstance.reportPage()).toBe(1);
+    expect(fixture.nativeElement.querySelectorAll('.panel tbody tr')).toHaveLength(5);
+  });
+
+  it('keeps a valid current page after refreshing the report list', () => {
+    const eleven = Array.from({ length: 11 }, (_, i) => ({ ...report, id: `r${i + 1}` }));
+    fixture.componentInstance.reports.set(eleven);
+    fixture.componentInstance.changeReportPage(2);
+    fixture.componentInstance.loadReports();
+    http.expectOne('/api/expense-reports').flush(eleven.slice(0, 10));
+    expect(fixture.componentInstance.reportPage()).toBe(2);
+    expect(fixture.componentInstance.visibleReports()).toHaveLength(5);
+  });
+
   it('opens a modal and loads the report by ID', () => {
     fixture.componentInstance.openDetail(report);
     expect(fixture.nativeElement.querySelector('dialog[aria-labelledby="detail-report-title"]')?.open).toBe(true);

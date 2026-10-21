@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, inject, OnInit, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, computed, inject, OnInit, signal, viewChild } from '@angular/core';
 import { catchError, finalize, forkJoin, map, of, switchMap } from 'rxjs';
 import { apiErrorMessage } from '../../core/api/api-error';
 import { CreateReportRequest, ExpenseDto, ExpensePage, ReportDto, SaveExpenseRequest, UserInfo } from '../../core/api/api.models';
@@ -26,6 +26,21 @@ export class ReportListPage implements OnInit {
   private readonly expenseDeleteDialog = viewChild.required<ElementRef<HTMLDialogElement>>('expenseDeleteDialog');
 
   readonly reports = signal<ReportDto[]>([]);
+  readonly reportPageSize = 5;
+  readonly reportPage = signal(1);
+  readonly reportPageCount = computed(() =>
+    Math.max(1, Math.ceil(this.reports().length / this.reportPageSize)),
+  );
+  readonly visibleReports = computed(() => {
+    const start = (this.reportPage() - 1) * this.reportPageSize;
+    return this.reports().slice(start, start + this.reportPageSize);
+  });
+
+  changeReportPage(page: number): void {
+    if (page < 1 || page > this.reportPageCount()) return;
+    this.reportPage.set(page);
+  }
+
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly eligibleUsers = signal<UserInfo[]>([]);
@@ -61,7 +76,10 @@ export class ReportListPage implements OnInit {
     this.loading.set(true);
     this.error.set(null);
     this.reportsApi.list().pipe(finalize(() => this.loading.set(false))).subscribe({
-      next: data => this.reports.set(data),
+      next: data => {
+        this.reports.set(data);
+        this.reportPage.update(page => Math.min(page, this.reportPageCount()));
+      },
       error: err => this.error.set(apiErrorMessage(err)),
     });
   }

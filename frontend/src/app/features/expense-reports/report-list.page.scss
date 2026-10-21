@@ -189,3 +189,18 @@ dialog[aria-labelledby="detail-report-title"] {
 dialog[aria-labelledby="expense-editor-title"] {
   width: min(760px, calc(100vw - 32px));
 }
+
+.report-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  color: #475569;
+
+  .report-pagination-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+}
