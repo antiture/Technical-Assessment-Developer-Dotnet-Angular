@@ -180,6 +180,44 @@ describe('UserListPage', () => {
     expect(fixture.nativeElement.textContent).toContain('Page 2 / 2');
   });
 
+  it('orders out-of-order API results by Name ASC then Id ASC before pagination', () => {
+    const users = [
+      { id: '3', name: 'Zoé' },
+      { id: '9', name: 'Alice' },
+      { id: '2', name: 'alice' },
+      { id: '5', name: 'Benoît' },
+      { id: '1', name: 'Émile' },
+      { id: '4', name: 'Claire' },
+    ];
+    fixture.componentInstance.loadUsers();
+    http.expectOne('/api/users').flush(users);
+    for (const u of users) {
+      http.expectOne(`/api/users/${u.id}`).flush({ ...savedUser, id: u.id, isActive: true });
+    }
+    fixture.detectChanges();
+    expect(fixture.componentInstance.users().map(x => x.id)).toEqual(['2', '9', '5', '4', '1', '3']);
+    expect(fixture.componentInstance.pagedUsers().map(x => x.id)).toEqual(['2', '9', '5', '4', '1']);
+    fixture.componentInstance.changePage(2);
+    expect(fixture.componentInstance.pagedUsers().map(x => x.id)).toEqual(['3']);
+  });
+
+  it('keeps user ordering stable after an activation-state refresh', () => {
+    const first = [{ id: '3', name: 'Zoé' }, { id: '2', name: 'Alice' }, { id: '1', name: 'Marc' }];
+    fixture.componentInstance.loadUsers();
+    http.expectOne('/api/users').flush(first);
+    for (const u of first) {
+      http.expectOne(`/api/users/${u.id}`).flush({ ...savedUser, id: u.id, isActive: true });
+    }
+    const before = fixture.componentInstance.users().map(x => x.id);
+    fixture.componentInstance.loadUsers();
+    http.expectOne('/api/users').flush([first[2], first[0], first[1]]);
+    for (const u of [first[2], first[0], first[1]]) {
+      http.expectOne(`/api/users/${u.id}`).flush({ ...savedUser, id: u.id, isActive: u.id !== '2' });
+    }
+    expect(fixture.componentInstance.users().map(x => x.id)).toEqual(before);
+    expect(fixture.componentInstance.activity()['2']).toBe(false);
+  });
+
   it('prevents navigation outside the available pages', () => {
     fixture.componentInstance.changePage(2);
     expect(fixture.componentInstance.currentPage()).toBe(1);

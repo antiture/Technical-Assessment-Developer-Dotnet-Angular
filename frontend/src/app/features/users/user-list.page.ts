@@ -53,8 +53,12 @@ export class UserListPage implements OnInit {
     this.error.set(null);
     this.api.list().pipe(
       switchMap(users => {
-        this.users.set(users);
-        this.currentPage.update(page => Math.min(page, Math.max(1, Math.ceil(users.length / this.pageSize))));
+        const sortedUsers = [...users].sort((a, b) => {
+          const byName = a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' });
+          return byName || a.id.localeCompare(b.id);
+        });
+        this.users.set(sortedUsers);
+        this.currentPage.update(page => Math.min(page, Math.max(1, Math.ceil(sortedUsers.length / this.pageSize))));
         this.activity.set({});
         if (users.length === 0) return of({} as Record<string, boolean | null>);
         return forkJoin(users.map(user =>
