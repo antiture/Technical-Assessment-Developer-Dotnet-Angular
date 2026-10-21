@@ -164,4 +164,46 @@ describe('UserListPage', () => {
     expect(fixture.componentInstance.error()).toBe('Invalid user');
     expect(fixture.componentInstance.editorOpen()).toBe(true);
   });
+  it('shows five users per page and navigates to the second page', () => {
+    const users = Array.from({ length: 7 }, (_, i) => ({ id: String(i + 1), name: `User ${i + 1}` }));
+    fixture.componentInstance.loadUsers();
+    http.expectOne('/api/users').flush(users);
+    for (const u of users) {
+      http.expectOne(`/api/users/${u.id}`).flush({ ...savedUser, id: u.id, isActive: true });
+    }
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('tbody tr')).toHaveLength(5);
+    expect(fixture.nativeElement.textContent).toContain('Page 1 / 2');
+    fixture.componentInstance.changePage(2);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('tbody tr')).toHaveLength(2);
+    expect(fixture.nativeElement.textContent).toContain('Page 2 / 2');
+  });
+
+  it('prevents navigation outside the available pages', () => {
+    fixture.componentInstance.changePage(2);
+    expect(fixture.componentInstance.currentPage()).toBe(1);
+    fixture.componentInstance.changePage(0);
+    expect(fixture.componentInstance.currentPage()).toBe(1);
+  });
+
+  it('clamps the page when refreshed data removes the final page', () => {
+    const users = Array.from({ length: 6 }, (_, i) => ({ id: String(i + 1), name: `User ${i + 1}` }));
+    fixture.componentInstance.loadUsers();
+    http.expectOne('/api/users').flush(users);
+    for (const u of users) {
+      http.expectOne(`/api/users/${u.id}`).flush({ ...savedUser, id: u.id, isActive: true });
+    }
+    fixture.componentInstance.changePage(2);
+    expect(fixture.componentInstance.currentPage()).toBe(2);
+    fixture.componentInstance.loadUsers();
+    http.expectOne('/api/users').flush(users.slice(0, 5));
+    for (const u of users.slice(0, 5)) {
+      http.expectOne(`/api/users/${u.id}`).flush({ ...savedUser, id: u.id, isActive: true });
+    }
+    fixture.detectChanges();
+    expect(fixture.componentInstance.currentPage()).toBe(1);
+    expect(fixture.nativeElement.querySelectorAll('tbody tr')).toHaveLength(5);
+  });
+
 });

@@ -19,7 +19,7 @@
         <table>
           <thead><tr><th>Nom</th><th>Statut</th><th>Actions</th></tr></thead>
           <tbody>
-            @for (item of users(); track item.id) {
+            @for (item of pagedUsers(); track item.id) {
               <tr>
                 <td>{{ item.name }}</td>
                 <td>
@@ -44,6 +44,13 @@
             }
           </tbody>
         </table>
+        <nav class="pagination" aria-label="Pagination des utilisateurs">
+          <span>Page {{ currentPage() }} / {{ totalPages() }}</span>
+          <div class="pagination-actions">
+            <button type="button" class="secondary" [disabled]="currentPage() === 1" (click)="changePage(currentPage() - 1)">Précédent</button>
+            <button type="button" class="secondary" [disabled]="currentPage() === totalPages()" (click)="changePage(currentPage() + 1)">Suivant</button>
+          </div>
+        </nav>
       }
     </div>
   }

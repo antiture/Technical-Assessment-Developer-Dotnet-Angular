@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, inject, OnInit, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, inject, OnInit, signal, computed, viewChild } from '@angular/core';
 import { catchError, finalize, forkJoin, map, of, switchMap } from 'rxjs';
 import { apiErrorMessage } from '../../core/api/api-error';
 import { SaveUserRequest, UserDetails, UserInfo } from '../../core/api/api.models';
@@ -17,6 +17,19 @@ export class UserListPage implements OnInit {
   private readonly editorDialog = viewChild.required<ElementRef<HTMLDialogElement>>('editorDialog');
 
   readonly users = signal<UserInfo[]>([]);
+  readonly pageSize = 5;
+  readonly currentPage = signal(1);
+  readonly totalPages = computed(() => Math.max(1, Math.ceil(this.users().length / this.pageSize)));
+  readonly pagedUsers = computed(() => {
+    const first = (this.currentPage() - 1) * this.pageSize;
+    return this.users().slice(first, first + this.pageSize);
+  });
+
+  changePage(page: number): void {
+    if (!Number.isInteger(page) || page < 1 || page > this.totalPages()) return;
+    this.currentPage.set(page);
+  }
+
   // Null = detail unavailable: never infer an activity state from the list response.
   readonly activity = signal<Record<string, boolean | null>>({});
   readonly loading = signal(false);
@@ -41,6 +54,7 @@ export class UserListPage implements OnInit {
     this.api.list().pipe(
       switchMap(users => {
         this.users.set(users);
+        this.currentPage.update(page => Math.min(page, Math.max(1, Math.ceil(users.length / this.pageSize))));
         this.activity.set({});
         if (users.length === 0) return of({} as Record<string, boolean | null>);
         return forkJoin(users.map(user =>
